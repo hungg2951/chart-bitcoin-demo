@@ -1,103 +1,159 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useRef, useState } from "react";
+import useSWR from "swr";
+import {
+  createChart,
+  IChartApi,
+  UTCTimestamp,
+  CandlestickSeries,
+  HistogramSeries,
+} from "lightweight-charts";
+import { cryptoCoins, GetCandles } from "@/api/bitcoin";
+import LoadingSpinner from "@/components/loading";
+
+const timeFrame = [
+  "1m",
+  "5m",
+  "15m",
+  "30m",
+  "1h",
+  "2h",
+  "4h",
+  "6h",
+  "12h",
+  "1d",
+  "3d",
+  "1w",
+];
+
+// Hàm fetch dữ liệu từ API dựa trên loại tiền mã hóa và khung thời gian
+const fetcher = async (timeframe: string, crypto: string) => {
+  const data = await GetCandles(timeframe, crypto);
+  return data.map((d) => ({
+    time: (d.openTime / 1000) as UTCTimestamp,
+    open: d.open,
+    high: d.high,
+    low: d.low,
+    close: d.close,
+    volume: d.volume,
+  }));
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const volumeChartContainerRef = useRef<HTMLDivElement>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [timeframe, setTimeframe] = useState<string>("1m");
+  const [crypto, setCrypto] = useState<string>("BTCUSDT");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Lấy dữ liệu từ API với loại tiền và khung thời gian
+  const { data, isLoading, error } = useSWR(
+    [timeframe, crypto],
+    ([timeframe, crypto]) => fetcher(timeframe, crypto),
+    {
+      refreshInterval: 60000,
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+
+  useEffect(() => {
+    if (!data || !chartContainerRef.current || !volumeChartContainerRef.current)
+      return;
+
+    const commonOptions = {
+      layout: {
+        background: { color: theme === "dark" ? "#1e1e1e" : "#ffffff" },
+        textColor: theme === "dark" ? "#ffffff" : "#000000",
+      },
+      grid: {
+        vertLines: { color: theme === "dark" ? "#444" : "#ddd" },
+        horzLines: { color: theme === "dark" ? "#444" : "#ddd" },
+      },
+    };
+
+    const chart: IChartApi = createChart(chartContainerRef.current, {
+      ...commonOptions,
+      width: chartContainerRef.current.clientWidth,
+      height: 400,
+    });
+
+    const candlestickSeries = chart.addSeries(CandlestickSeries);
+    candlestickSeries.setData(data);
+
+    const volumeChart: IChartApi = createChart(
+      volumeChartContainerRef.current,
+      {
+        ...commonOptions,
+        width: volumeChartContainerRef.current.clientWidth,
+        height: 100,
+      }
+    );
+
+    const volumeSeries = volumeChart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "",
+    });
+
+    volumeSeries.setData(
+      data.map((d) => ({
+        time: d.time,
+        value: d.volume,
+        color: d.close > d.open ? "#26a69a" : "#ef5350",
+      }))
+    );
+
+    return () => {
+      chart.remove();
+      volumeChart.remove();
+    };
+  }, [data, theme]);
+
+  return (
+    <div>
+      <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+        Toggle Theme
+      </button>
+
+      {/* Select to choose cryptocurrency */}
+      <select onChange={(e) => setCrypto(e.target.value)} value={crypto}>
+        {cryptoCoins.map((coin) => (
+          <option key={coin.cryptoName} value={coin.cryptoName}>
+            <img src={coin.cryptoImage} alt="" />
+            {coin.cryptoName}
+          </option>
+        ))}
+      </select>
+
+      {/* Select to choose timeframe */}
+      <select onChange={(e) => setTimeframe(e.target.value)} value={timeframe}>
+        {timeFrame.map((tf) => (
+          <option key={tf} value={tf}>
+            {tf}
+          </option>
+        ))}
+      </select>
+
+      {/* Display chart or loading spinner */}
+      {isLoading ? (
+        <div className="relative w-full h-full">
+          <LoadingSpinner />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      ) : error ? (
+        <div>Error loading data</div>
+      ) : (
+        <div>
+          <div
+            ref={chartContainerRef}
+            style={{ width: "100%", height: "400px" }}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <div
+            ref={volumeChartContainerRef}
+            style={{ width: "100%", height: "100px" }}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+      )}
     </div>
   );
 }
