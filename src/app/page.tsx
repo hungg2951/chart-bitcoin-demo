@@ -112,12 +112,12 @@ export default function Home() {
 
   return (
     <div>
-      <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-        Toggle Theme
+      <button className="p-2 bg-amber-600" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+        Đổi màu nền
       </button>
 
       {/* Select to choose cryptocurrency */}
-      <select onChange={(e) => setCrypto(e.target.value)} value={crypto}>
+      <select className="border border-black m-2" onChange={(e) => setCrypto(e.target.value)} value={crypto}>
         {cryptoCoins.map((coin) => (
           <option key={coin.cryptoName} value={coin.cryptoName}>
             <img src={coin.cryptoImage} alt="" />
@@ -127,7 +127,7 @@ export default function Home() {
       </select>
 
       {/* Select to choose timeframe */}
-      <select onChange={(e) => setTimeframe(e.target.value)} value={timeframe}>
+      <select  className="border border-black" onChange={(e) => setTimeframe(e.target.value)} value={timeframe}>
         {timeFrame.map((tf) => (
           <option key={tf} value={tf}>
             {tf}
