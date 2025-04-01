@@ -97,7 +97,9 @@ html.dark .candlestick__chart,html.dark .volume__chart {
     position: absolute;
     bottom: 0;
     left: 0;
-    text-align: center;
+  }
+  select{
+    text-align: center !important;
   }
   html.dark .select::before,html.dark button::before{
     background: white;
