@@ -19,7 +19,7 @@ html.dark select {
 }
 
 select, button{
-  @apply cursor-pointer border-none focus:outline-none relative text-center w-fit appearance-none
+  @apply cursor-pointer border-none focus:outline-none relative text-center
 }
 .select{
   @apply relative
@@ -81,6 +81,7 @@ html.dark .candlestick__chart,html.dark .volume__chart {
   }
   .select select, button{
     width: 100%;
+    text-align: center;
   }
   .select::after, button::after {
     display: none;
@@ -97,9 +98,6 @@ html.dark .candlestick__chart,html.dark .volume__chart {
     position: absolute;
     bottom: 0;
     left: 0;
-  }
-  select{
-    width: 100%;
   }
   html.dark .select::before,html.dark button::before{
     background: white;
