@@ -19,7 +19,7 @@ html.dark select {
 }
 
 select, button{
-  @apply cursor-pointer border-none focus:outline-none relative text-center w-full
+  @apply cursor-pointer border-none focus:outline-none relative text-center w-full appearance-auto
 }
 .select{
   @apply relative
