@@ -154,10 +154,14 @@ export default function Home() {
       <div className={`header ${active}`}>
         {/* Select to choose cryptocurrency */}
         <div className="select">
-          <select onChange={(e) => {
-            onHanleMenu();
-            setCrypto(e.target.value)
-          }} value={crypto}>
+          <select
+            className="text-center"
+            onChange={(e) => {
+              onHanleMenu();
+              setCrypto(e.target.value);
+            }}
+            value={crypto}
+          >
             {cryptoCoins.map((coin) => (
               <option key={coin.cryptoName} value={coin.cryptoName}>
                 {coin.cryptoName}
@@ -169,6 +173,7 @@ export default function Home() {
         {/* Select to choose timeframe */}
         <div className="select">
           <select
+            className="text-center"
             onChange={(e) => {
               onHanleMenu();
               setTimeframe(e.target.value);
@@ -182,16 +187,20 @@ export default function Home() {
             ))}
           </select>
         </div>
-        <button onClick={() => {
-          onHanleMenu();
-          fetchCurrentPrice()
-        }}>
+        <button
+          onClick={() => {
+            onHanleMenu();
+            fetchCurrentPrice();
+          }}
+        >
           Giá {crypto} hiện tại
         </button>
-        <button onClick={() => {
-          onHanleMenu();
-          fetchPriceOneMinuteAgo()
-        }}>
+        <button
+          onClick={() => {
+            onHanleMenu();
+            fetchPriceOneMinuteAgo();
+          }}
+        >
           Giá {crypto} 1p trước
         </button>
         <button onClick={toggleTheme} className="toggle__theme">
