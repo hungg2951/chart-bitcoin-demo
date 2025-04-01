@@ -8,25 +8,14 @@ import {
   CandlestickSeries,
   HistogramSeries,
 } from "lightweight-charts";
-import { cryptoCoins, GetCandles } from "@/api/bitcoin";
+import { cryptoCoins, GetCandles, GetCryptoInfo } from "@/api/bitcoin";
 import LoadingSpinner from "@/components/loading";
+import { timeFrame } from "@/constant/timeframe";
+import { useTheme } from "@/context/themeContext";
+import { GoSun } from "react-icons/go";
+import { MdDarkMode, MdOutlineCancel } from "react-icons/md";
+import { IoMenu } from "react-icons/io5";
 
-const timeFrame = [
-  "1m",
-  "5m",
-  "15m",
-  "30m",
-  "1h",
-  "2h",
-  "4h",
-  "6h",
-  "12h",
-  "1d",
-  "3d",
-  "1w",
-];
-
-// Hàm fetch dữ liệu từ API dựa trên loại tiền mã hóa và khung thời gian
 const fetcher = async (timeframe: string, crypto: string) => {
   const data = await GetCandles(timeframe, crypto);
   return data.map((d) => ({
@@ -42,22 +31,62 @@ const fetcher = async (timeframe: string, crypto: string) => {
 export default function Home() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const volumeChartContainerRef = useRef<HTMLDivElement>(null);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [timeframe, setTimeframe] = useState<string>("1m");
   const [crypto, setCrypto] = useState<string>("BTCUSDT");
+  const [active, setActive] = useState<string>("");
+  const { theme, toggleTheme } = useTheme();
 
   // Lấy dữ liệu từ API với loại tiền và khung thời gian
-  const { data, isLoading, error } = useSWR(
+  const { data, isLoading, error, mutate } = useSWR(
     [timeframe, crypto],
     ([timeframe, crypto]) => fetcher(timeframe, crypto),
     {
       refreshInterval: 60000,
-      revalidateIfStale: false,
+      revalidateIfStale: true,
+      keepPreviousData: true,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
     }
   );
 
+  // Lấy giá Bitcoin hiện tại
+  const fetchCurrentPrice = async () => {
+    try {
+      const { data } = await GetCryptoInfo(crypto);
+
+      const newData = [
+        {
+          time: (data.closeTime / 1000) as UTCTimestamp,
+          open: parseFloat(data.openPrice),
+          high: parseFloat(data.highPrice),
+          low: parseFloat(data.lowPrice),
+          close: parseFloat(data.lastPrice),
+          volume: parseFloat(data.volume),
+        },
+      ];
+      mutate(newData, false);
+    } catch (error) {
+      console.error("Lỗi khi lấy giá Bitcoin hiện tại:", error);
+    }
+  };
+  // Lấy giá Bitcoin cách đây 1 phút
+  const fetchPriceOneMinuteAgo = async () => {
+    try {
+      const data = await GetCandles("1m", crypto);
+      const newData = data.map((d) => ({
+        time: (d.openTime / 1000) as UTCTimestamp,
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+        volume: d.volume,
+      }));
+
+      mutate(newData, false);
+    } catch (error) {
+      console.error("Lỗi khi lấy giá Bitcoin cách đây 1 phút:", error);
+    }
+  };
   useEffect(() => {
     if (!data || !chartContainerRef.current || !volumeChartContainerRef.current)
       return;
@@ -78,7 +107,7 @@ export default function Home() {
       width: chartContainerRef.current.clientWidth,
       height: 400,
     });
-
+    // set data cho biểu đồ nến
     const candlestickSeries = chart.addSeries(CandlestickSeries);
     candlestickSeries.setData(data);
 
@@ -95,7 +124,7 @@ export default function Home() {
       priceFormat: { type: "volume" },
       priceScaleId: "",
     });
-
+    // set data cho biểu đồ khối lượng giao dịch
     volumeSeries.setData(
       data.map((d) => ({
         time: d.time,
@@ -109,49 +138,76 @@ export default function Home() {
       volumeChart.remove();
     };
   }, [data, theme]);
-
+  const onHanleMenu = () => {
+    setActive(active == "active" ? "" : "active");
+  };
   return (
-    <div>
-      <button className="p-2 bg-amber-600" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-        Đổi màu nền
-      </button>
+    <div className="container">
+      <div className="btn__mobile">
+        <div onClick={toggleTheme}>
+          {theme === "light" ? <GoSun /> : <MdDarkMode />}
+        </div>
+        <div className="toggle___menu" onClick={() => onHanleMenu()}>
+          {active == "active" ? <MdOutlineCancel /> : <IoMenu />}
+        </div>
+      </div>
+      <div className={`header ${active}`}>
+        {/* Select to choose cryptocurrency */}
+        <div className="select">
+          <select onChange={(e) => {
+            onHanleMenu();
+            setCrypto(e.target.value)
+          }} value={crypto}>
+            {cryptoCoins.map((coin) => (
+              <option key={coin.cryptoName} value={coin.cryptoName}>
+                {coin.cryptoName}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Select to choose cryptocurrency */}
-      <select className="border border-black m-2" onChange={(e) => setCrypto(e.target.value)} value={crypto}>
-        {cryptoCoins.map((coin) => (
-          <option key={coin.cryptoName} value={coin.cryptoName}>
-            <img src={coin.cryptoImage} alt="" />
-            {coin.cryptoName}
-          </option>
-        ))}
-      </select>
-
-      {/* Select to choose timeframe */}
-      <select  className="border border-black" onChange={(e) => setTimeframe(e.target.value)} value={timeframe}>
-        {timeFrame.map((tf) => (
-          <option key={tf} value={tf}>
-            {tf}
-          </option>
-        ))}
-      </select>
-
-      {/* Display chart or loading spinner */}
+        {/* Select to choose timeframe */}
+        <div className="select">
+          <select
+            onChange={(e) => {
+              onHanleMenu();
+              setTimeframe(e.target.value);
+            }}
+            value={timeframe}
+          >
+            {timeFrame.map((tf) => (
+              <option key={tf} value={tf}>
+                {tf}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button onClick={() => {
+          onHanleMenu();
+          fetchCurrentPrice()
+        }}>
+          Giá {crypto} hiện tại
+        </button>
+        <button onClick={() => {
+          onHanleMenu();
+          fetchPriceOneMinuteAgo()
+        }}>
+          Giá {crypto} 1p trước
+        </button>
+        <button onClick={toggleTheme} className="toggle__theme">
+          {theme === "light" ? <GoSun /> : <MdDarkMode />}
+        </button>
+      </div>
       {isLoading ? (
-        <div className="relative w-full h-full">
+        <div className="relative w-full min-h-[500px]">
           <LoadingSpinner />
         </div>
       ) : error ? (
         <div>Error loading data</div>
       ) : (
         <div>
-          <div
-            ref={chartContainerRef}
-            style={{ width: "100%", height: "400px" }}
-          />
-          <div
-            ref={volumeChartContainerRef}
-            style={{ width: "100%", height: "100px" }}
-          />
+          <div className="candlestick__chart" ref={chartContainerRef} />
+          <div className="volume__chart" ref={volumeChartContainerRef} />
         </div>
       )}
     </div>
