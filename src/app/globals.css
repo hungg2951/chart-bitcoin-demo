@@ -63,7 +63,6 @@ html.dark .candlestick__chart,html.dark .volume__chart {
 @media (max-width: 640px) {
   .header{
     width: 0;
-    border-left: 1px solid #191919;
     float: right;
     overflow: hidden;
     line-height: 40px;
@@ -98,6 +97,7 @@ html.dark .candlestick__chart,html.dark .volume__chart {
     position: absolute;
     bottom: 0;
     left: 0;
+    text-align: center;
   }
   html.dark .select::before,html.dark button::before{
     background: white;
