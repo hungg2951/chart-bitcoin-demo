@@ -19,7 +19,7 @@ html.dark select {
 }
 
 select, button{
-  @apply cursor-pointer border-none focus:outline-none relative text-center w-full appearance-auto
+  @apply cursor-pointer border-none focus:outline-none relative text-center w-fit appearance-none
 }
 .select{
   @apply relative
@@ -99,7 +99,7 @@ html.dark .candlestick__chart,html.dark .volume__chart {
     left: 0;
   }
   select{
-    color: black;
+    width: 100%;
   }
   html.dark .select::before,html.dark button::before{
     background: white;
