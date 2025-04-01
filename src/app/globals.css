@@ -10,8 +10,8 @@ html.dark body {
 html.dark select {
   @apply text-white bg-[#191919]
 }
-.container{
-  @apply p-4 max-sm:p-2
+.wrapper{
+  @apply p-4 max-sm:p-2  w-[1440px] mx-auto max-sm:w-full
 }
 
 .header{

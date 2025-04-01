@@ -142,7 +142,7 @@ export default function Home() {
     setActive(active == "active" ? "" : "active");
   };
   return (
-    <div className="container">
+    <div className="wrapper">
       <div className="btn__mobile">
         <div onClick={toggleTheme}>
           {theme === "light" ? <GoSun /> : <MdDarkMode />}
